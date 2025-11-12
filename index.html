@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Diddy Blud Calculator</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Tone.js for sound effects and sampler -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Set the custom font */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrolling if the GIF is larger than viewport */
+        }
+        
+        /* Custom background styling for the GIF */
+        .gif-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://media.tenor.com/yOKTxh5m2lIAAAAM/tesla-and-einstein-luma-ai.gif');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: -2; /* Place behind the content */
+        }
+
+        /* Dark overlay for readability - reduced opacity from 0.7 to 0.5 */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); 
+            z-index: -1;
+        }
+
+        .calc-button {
+            @apply p-4 rounded-lg text-2xl font-bold transition duration-150 ease-in-out shadow-lg transform hover:scale-105;
+            min-width: 60px; /* Ensure buttons are not too small */
+            height: 60px;
+        }
+        
+        /* Responsive sizing for the main calculator card */
+        @media (max-width: 640px) {
+            .calculator-card {
+                width: 95%;
+                max-width: none;
+            }
+        }
+        
+        .loading-message {
+            @apply text-yellow-400 text-sm mt-2 text-center;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <!-- Background GIF container -->
+    <div class="gif-background" role="img" aria-label="Animated GIF featuring figures resembling Nikola Tesla and Albert Einstein"></div>
+
+    <!-- Dark Overlay for Readability -->
+    <div class="overlay"></div>
+
+    <!-- Calculator Card - Opacity reduced from 90% to 50% -->
+    <div class="calculator-card p-6 bg-gray-900 bg-opacity-50 rounded-2xl shadow-2xl backdrop-blur-sm w-full max-w-sm mx-4">
+        
+        <h1 class="text-3xl font-extrabold text-blue-400 mb-4 text-center">The Diddy Blud Calculator</h1>
+
+        <!-- Display -->
+        <input id="display" type="text" readonly value="0" 
+               class="w-full h-20 text-4xl text-right p-3 mb-6 rounded-xl bg-gray-800 text-green-400 font-mono shadow-inner border-2 border-green-500/50 focus:outline-none" 
+               aria-label="Calculator display">
+               
+        <!-- Loading Message for MP3 -->
+        <div id="loading-status" class="loading-message">Loading sound...</div>
+
+        <!-- Button Grid -->
+        <div class="grid grid-cols-4 gap-3 text-white">
+            
+            <!-- Row 1 -->
+            <button onclick="clearDisplay()" class="calc-button bg-red-600 hover:bg-red-700 col-span-2">C</button>
+            <button onclick="appendOperator('/')" class="calc-button bg-gray-700 hover:bg-gray-600">/</button>
+            <button onclick="appendOperator('*')" class="calc-button bg-gray-700 hover:bg-gray-600">*</button>
+
+            <!-- Row 2 -->
+            <button onclick="appendNumber(7)" class="calc-button bg-gray-800 hover:bg-gray-700">7</button>
+            <button onclick="appendNumber(8)" class="calc-button bg-gray-800 hover:bg-gray-700">8</button>
+            <button onclick="appendNumber(9)" class="calc-button bg-gray-800 hover:bg-gray-700">9</button>
+            <button onclick="appendOperator('-')" class="calc-button bg-gray-700 hover:bg-gray-600">-</button>
+
+            <!-- Row 3 -->
+            <button onclick="appendNumber(4)" class="calc-button bg-gray-800 hover:bg-gray-700">4</button>
+            <button onclick="appendNumber(5)" class="calc-button bg-gray-800 hover:bg-gray-700">5</button>
+            <button onclick="appendNumber(6)" class="calc-button bg-gray-800 hover:bg-gray-700">6</button>
+            <button onclick="appendOperator('+')" class="calc-button bg-gray-700 hover:bg-gray-600">+</button>
+
+            <!-- Row 4 -->
+            <button onclick="appendNumber(1)" class="calc-button bg-gray-800 hover:bg-gray-700">1</button>
+            <button onclick="appendNumber(2)" class="calc-button bg-gray-800 hover:bg-gray-700">2</button>
+            <button onclick="appendNumber(3)" class="calc-button bg-gray-800 hover:bg-gray-700">3</button>
+            
+            <!-- Equals Button - The Magic Button -->
+            <button onclick="calculate()" class="calc-button bg-blue-600 hover:bg-blue-700 row-span-2 text-3xl">=</button>
+
+            <!-- Row 5 (Part of) -->
+            <button onclick="appendNumber(0)" class="calc-button bg-gray-800 hover:bg-gray-700 col-span-2">0</button>
+            <button onclick="appendDecimal()" class="calc-button bg-gray-800 hover:bg-gray-700">.</button>
+            
+        </div>
+    </div>
+
+    <script>
+        // --- Tone.js Setup for MP3 Loading ---
+        let sampler;
+        let isLoaded = false;
+        const loadingStatusElement = document.getElementById('loading-status');
+
+        function initializeSampler() {
+            // Tone.Sampler is used to load and play an external audio file
+            sampler = new Tone.Sampler({
+                urls: {
+                    // Map the note 'C1' to the external MP3 file
+                    "C1": "vineboom.mp3", 
+                },
+                onload: () => {
+                    isLoaded = true;
+                    console.log("vineboom.mp3 loaded successfully.");
+                    loadingStatusElement.textContent = "Sound Ready! 🎧";
+                    loadingStatusElement.classList.remove('text-yellow-400');
+                    loadingStatusElement.classList.add('text-green-400');
+                },
+                onerror: (e) => {
+                    isLoaded = false;
+                    console.error("Error loading vineboom.mp3. Using silent fallback.", e);
+                    loadingStatusElement.textContent = "Sound load failed. Silent mode.";
+                    loadingStatusElement.classList.remove('text-yellow-400');
+                    loadingStatusElement.classList.add('text-red-400');
+                }
+            }).toDestination();
+        }
+
+        // Start loading the MP3 as soon as the DOM is ready
+        document.addEventListener('DOMContentLoaded', initializeSampler);
+
+        function playBoomSound() {
+            // Start the audio context on user interaction (required by browsers)
+            if (Tone.context.state !== 'running') {
+                Tone.start();
+            }
+            
+            if (isLoaded) {
+                // Trigger the note mapped to the MP3. Play for 1 second.
+                sampler.triggerAttackRelease("C1", "1s"); 
+            } else {
+                console.log("Sound is not ready yet.");
+            }
+        }
+        // ----------------------------------------
+
+        const display = document.getElementById('display');
+        let currentInput = '';
+        let resultDisplayed = false;
+
+        // Function to reset the display if a result was just shown
+        function checkResult() {
+            if (resultDisplayed) {
+                currentInput = '';
+                resultDisplayed = false;
+            }
+        }
+
+        function updateDisplay() {
+            display.value = currentInput || '0';
+        }
+
+        // Handle number clicks
+        function appendNumber(number) {
+            checkResult();
+            currentInput += number;
+            updateDisplay();
+        }
+
+        // Handle operator clicks
+        function appendOperator(operator) {
+            resultDisplayed = false; 
+            if (currentInput === '' && (operator === '+' || operator === '*' || operator === '/')) return;
+            
+            const lastChar = currentInput.slice(-1);
+            if (['+', '-', '*', '/'].includes(lastChar)) {
+                if (operator !== '-') {
+                    currentInput = currentInput.slice(0, -1) + operator;
+                }
+            } else {
+                currentInput += operator;
+            }
+            updateDisplay();
+        }
+
+        // Handle decimal point
+        function appendDecimal() {
+            checkResult();
+            const parts = currentInput.split(/[+\-*/]/);
+            const lastPart = parts[parts.length - 1];
+
+            if (lastPart.includes('.')) return;
+            
+            if (currentInput === '' || ['+', '-', '*', '/'].includes(currentInput.slice(-1))) {
+                currentInput += '0.';
+            } else {
+                currentInput += '.';
+            }
+            updateDisplay();
+        }
+
+        // Clear display
+        function clearDisplay() {
+            currentInput = '';
+            resultDisplayed = false;
+            updateDisplay();
+        }
+
+        // The central logic: The result is ALWAYS 67
+        function calculate() {
+            // Play the actual MP3 sound
+            playBoomSound(); 
+            
+            if (currentInput === '') {
+                display.value = '67';
+            } else {
+                display.value = '67';
+                currentInput = '67'; 
+                resultDisplayed = true;
+            }
+        }
+
+        // Simple keyboard support
+        document.addEventListener('keydown', (event) => {
+            const key = event.key;
+            if (/[0-9]/.test(key)) {
+                appendNumber(key);
+            } else if (['+', '-', '*', '/'].includes(key)) {
+                appendOperator(key);
+            } else if (key === '.') {
+                appendDecimal();
+            } else if (key === 'Enter' || key === '=') {
+                event.preventDefault(); 
+                calculate();
+            } else if (key === 'Escape' || key === 'Delete') {
+                clearDisplay();
+            }
+        });
+
+        // Initialize display to 0
+        updateDisplay();
+    </script>
+</body>
+</html>
